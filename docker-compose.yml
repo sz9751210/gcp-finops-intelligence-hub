@@ -8,12 +8,11 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
     volumes:
       - ./backend:/app
       # Credentials should be mounted by the user
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/credentials.json
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 
   frontend:
     build: ./frontend

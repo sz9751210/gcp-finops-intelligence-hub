@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Card, Grid, Title, Text, Tab, TabList, TabGroup, TabPanels, TabPanel, Metric, Flex, Badge, BarList } from "@tremor/react";
+import { Card, Grid, Title, Text, Metric, Flex, Badge, BarList, Button, Table, TableHead, TableHeaderCell, TableBody, TableRow, TableCell } from "@tremor/react";
 import { AreaChart } from "@tremor/react";
+import Sidebar from './components/Sidebar';
+import ActionDialog from './components/ActionDialog';
+import SavingsBreakdown from './components/SavingsBreakdown';
 
-// Mock data for initial render or fallback
+// Mock data (Fallback)
 const mockChartData = [
   { date: "Jan 1", Cost: 2890 },
   { date: "Jan 2", Cost: 2756 },
@@ -13,138 +16,141 @@ const mockChartData = [
 ];
 
 function App() {
-  const [selectedView, setSelectedView] = useState(0);
+  const [selectedView, setSelectedView] = useState('overview');
   const [report, setReport] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedRec, setSelectedRec] = useState<any>(null);
 
   useEffect(() => {
-    // Fetch data from backend
-    // In a real scenario, use React Query or SWR
     fetch('http://localhost:8000/api/v1/report?project_id=my-project&zone=us-central1-a')
       .then(res => res.json())
       .then(data => setReport(data))
       .catch(err => console.error("Failed to fetch report", err));
   }, []);
 
+  const openAction = (rec: any) => {
+    setSelectedRec(rec);
+    setIsDialogOpen(true);
+  };
+
   return (
-    <main className="p-12 bg-slate-50 min-h-screen dark:bg-slate-900">
-      <Title className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">GCP FinOps Intelligence Hub</Title>
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden">
+      <Sidebar selectedView={selectedView} onSelectView={setSelectedView} />
 
-      {/* KPI Cards */}
-      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-6 mb-6">
-        <Card decoration="top" decorationColor="indigo">
-          <Text>Total Monthly Cost</Text>
-          <Metric>$ 12,450</Metric>
-          <Badge deltaType="moderateIncrease" className="mt-2">+4.2%</Badge>
-        </Card>
-        <Card decoration="top" decorationColor="emerald">
-          <Text>Potential Savings</Text>
-          <Metric>$ {report?.summary?.total_potential_savings?.toFixed(2) || "0.00"}</Metric>
-          <Text className="mt-2 text-emerald-600">from rightsizing</Text>
-        </Card>
-        <Card decoration="top" decorationColor="rose">
-          <Text>Zombie Resources</Text>
-          <Metric>{report?.summary?.zombie_resource_count || 0}</Metric>
-          <Text className="mt-2 text-rose-600">Assets wasted</Text>
-        </Card>
-        <Card decoration="top" decorationColor="amber">
-          <Text>Optimization Score</Text>
-          <Metric>72%</Metric>
-          <Text className="mt-2">Good standing</Text>
-        </Card>
-      </Grid>
-
-      {/* Main Content Areas */}
-      <TabGroup index={selectedView} onIndexChange={setSelectedView}>
-        <TabList className="mb-6">
-          <Tab>Overview & Trends</Tab>
-          <Tab>Rightsizing Opportunities</Tab>
-          <Tab>Zombie Hunter</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <Grid numItems={1} numItemsLg={2} className="gap-6">
-              <Card>
-                <Title>Cost Trend (30 Days)</Title>
-                <AreaChart
-                  className="h-72 mt-4"
-                  data={mockChartData}
-                  index="date"
-                  categories={["Cost"]}
-                  colors={["indigo"]}
-                />
+      <main className="flex-1 overflow-y-auto p-8">
+        {selectedView === 'overview' && (
+          <>
+            <Title className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">Dashboard Overview</Title>
+            <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-6 mb-6">
+              <Card decoration="top" decorationColor="indigo">
+                <Text>Total Monthly Cost</Text>
+                <Metric>$ 12,450</Metric>
+                <Badge deltaType="moderateIncrease" className="mt-2">+4.2%</Badge>
               </Card>
-              <Card>
-                <Title>Cost by Service</Title>
-                <Flex className="mt-4">
-                  <Text>Service</Text>
-                  <Text>Cost</Text>
-                </Flex>
-                <BarList
-                  data={[
-                    { name: "Compute Engine", value: 4500 },
-                    { name: "Cloud SQL", value: 3200 },
-                    { name: "BigQuery", value: 2100 },
-                    { name: "Cloud Storage", value: 1200 },
-                    { name: "Kubernetes Engine", value: 850 },
-                  ]}
-                  className="mt-2"
-                />
+              <Card decoration="top" decorationColor="emerald">
+                <Text>Potential Savings</Text>
+                <Metric>$ {report?.summary?.total_potential_savings?.toFixed(2) || "0.00"}</Metric>
+                <Text className="mt-2 text-emerald-600">from optimization</Text>
+              </Card>
+              <Card decoration="top" decorationColor="rose">
+                <Text>Zombie Resources</Text>
+                <Metric>{report?.summary?.zombie_resource_count || 0}</Metric>
+                <Text className="mt-2 text-rose-600">Assets wasted</Text>
+              </Card>
+              <Card decoration="top" decorationColor="amber">
+                <Text>Optimization Score</Text>
+                <Metric>72%</Metric>
+                <Text className="mt-2">Good standing</Text>
               </Card>
             </Grid>
-          </TabPanel>
-          <TabPanel>
-            <Card>
-              <Title>Rightsizing Recommendations</Title>
-              <Text className="mt-2 mb-4">Optimize VM sizes to match actual usage.</Text>
-              {/* Table logic would go here */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-500">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3">Resource</th>
-                      <th className="px-6 py-3">Recommendation</th>
-                      <th className="px-6 py-3">Savings</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report?.recommendations?.map((rec: any) => (
-                      <tr key={rec.recommendation_id} className="bg-white border-b">
-                        <td className="px-6 py-4 font-medium text-gray-900">{rec.description.split(" ")[0]}</td>
-                        <td className="px-6 py-4">{rec.description}</td>
-                        <td className="px-6 py-4 text-emerald-600">{rec.cost_savings?.amount_per_month} {rec.cost_savings?.currency}</td>
-                      </tr>
-                    ))}
-                    {(!report?.recommendations || report.recommendations.length === 0) && (
-                      <tr><td colSpan={3} className="px-6 py-4 text-center">No recommendations found.</td></tr>
-                    )}
-                  </tbody>
-                </table>
+
+            <Grid numItems={1} numItemsLg={3} className="gap-6">
+              <div className="col-span-2">
+                <Card>
+                  <Title>Cost Trend (30 Days)</Title>
+                  <AreaChart
+                    className="h-72 mt-4"
+                    data={mockChartData}
+                    index="date"
+                    categories={["Cost"]}
+                    colors={["indigo"]}
+                  />
+                </Card>
               </div>
-            </Card>
-          </TabPanel>
-          <TabPanel>
+              <div>
+                <SavingsBreakdown recommendations={report?.recommendations} zombies={report?.zombie_resources} />
+              </div>
+            </Grid>
+          </>
+        )}
+
+        {selectedView === 'rightsizing' && (
+          <>
+            <Title className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">Rightsizing Opportunities</Title>
             <Card>
-              <Title>Zombie Resources</Title>
-              <Text className="mt-2 mb-4">Unused resources that should be deleted.</Text>
-              <div className="grid gap-4">
-                {report?.zombie_resources?.map((res: any, idx: number) => (
-                  <div key={idx} className="p-4 border border-red-200 rounded-md bg-red-50 flex justify-between items-center">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeaderCell>Resource</TableHeaderCell>
+                    <TableHeaderCell>Recommendation</TableHeaderCell>
+                    <TableHeaderCell>Est. Savings</TableHeaderCell>
+                    <TableHeaderCell>Action</TableHeaderCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {report?.recommendations?.map((rec: any) => (
+                    <TableRow key={rec.recommendation_id}>
+                      <TableCell className="font-medium text-gray-900">{rec.description.split(" ")[0]}</TableCell>
+                      <TableCell>{rec.description}</TableCell>
+                      <TableCell className="text-emerald-600">{rec.cost_savings?.amount_per_month} {rec.cost_savings?.currency}</TableCell>
+                      <TableCell>
+                        <Button size="xs" onClick={() => openAction(rec)}>Fix It</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {(!report?.recommendations || report.recommendations.length === 0) && (
+                    <TableRow><TableCell colSpan={4} className="text-center">No recommendations found.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+          </>
+        )}
+
+        {selectedView === 'zombie' && (
+          <>
+            <Title className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">Zombie Hunter</Title>
+            <Grid numItems={1} numItemsLg={2} className="gap-6">
+              {report?.zombie_resources?.map((res: any, idx: number) => (
+                <Card key={idx} decoration="left" decorationColor="red">
+                  <Flex justifyContent="between" alignItems="center">
                     <div>
-                      <p className="font-bold text-red-700">{res.waste_reason}</p>
-                      <p className="text-sm">{res.resource_id} ({res.name})</p>
+                      <Text className="font-bold text-red-700">{res.waste_reason}</Text>
+                      <Title>{res.name}</Title>
+                      <Text className="text-sm text-gray-500 mt-1">{res.resource_id}</Text>
                     </div>
-                    <Badge color="red">Delete</Badge>
-                  </div>
-                ))}
-                {(!report?.zombie_resources || report.zombie_resources.length === 0) && (
-                  <Text>No zombie resources detected! Great job.</Text>
-                )}
-              </div>
-            </Card>
-          </TabPanel>
-        </TabPanels>
-      </TabGroup>
-    </main>
+                    <div className="text-right">
+                      <Text>Potential Waste</Text>
+                      <Metric className="text-red-600">$ {res.estimated_monthly_waste?.toFixed(2)}</Metric>
+                      <Button size="xs" color="red" className="mt-4" onClick={() => openAction({ description: `Delete ${res.resource_id}` })}>Delete</Button>
+                    </div>
+                  </Flex>
+                </Card>
+              ))}
+              {(!report?.zombie_resources || report.zombie_resources.length === 0) && (
+                <Text>No zombie resources detected! Great job.</Text>
+              )}
+            </Grid>
+          </>
+        )}
+      </main>
+
+      <ActionDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        recommendation={selectedRec}
+      />
+    </div>
   );
 }
 
