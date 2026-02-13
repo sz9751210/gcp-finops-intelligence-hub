@@ -1,0 +1,4 @@
+google-cloud-recommender
+google-cloud-monitoring
+google-cloud-asset
+google-cloud-compute
