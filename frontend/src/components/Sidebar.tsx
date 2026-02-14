@@ -8,7 +8,8 @@ interface SidebarProps {
 
 const navigation = [
     { name: 'Overview', icon: HomeIcon, id: 'overview' },
-    { name: 'Rightsizing', icon: ListBulletIcon, id: 'rightsizing' },
+    { name: 'Resource Inventory', icon: ListBulletIcon, id: 'inventory' },
+    { name: 'Rightsizing', icon: CurrencyDollarIcon, id: 'rightsizing' },
     { name: 'Zombie Hunter', icon: ExclamationTriangleIcon, id: 'zombie' },
     { name: 'Settings', icon: CogIcon, id: 'settings' },
 ];

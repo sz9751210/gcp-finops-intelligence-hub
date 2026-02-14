@@ -29,8 +29,21 @@ class GCPZombieRepository(ZombieRepository):
 
     def _detect_idle_vms(self, project_id: str, zone: str, days: int = 30, threshold: float = 0.05) -> List[ZombieResource]:
         client = monitoring_v3.MetricServiceClient()
+        compute_client = compute_v1.InstancesClient()
         project_name = f"projects/{project_id}"
         
+        # Simplified pricing table (monthly in USD)
+        # In a real app, use the Cloud Billing Catalog API
+        PRICING = {
+            "e2-micro": 6.11,
+            "e2-small": 12.23,
+            "e2-medium": 24.46,
+            "e2-standard-2": 48.92,
+            "n1-standard-1": 24.27,
+            "n2-standard-2": 48.54,
+            "c2-standard-4": 126.63
+        }
+
         now = time.time()
         seconds = int(now)
         nanos = int((now - seconds) * 10**9)
@@ -69,7 +82,6 @@ class GCPZombieRepository(ZombieRepository):
             )
 
             for series in results:
-                # In monitoring, instance_id is often a numeric ID or string name depending on resource labels
                 instance_id = series.resource.labels.get("instance_id")
                 
                 is_idle = True
@@ -79,14 +91,32 @@ class GCPZombieRepository(ZombieRepository):
                         break
                 
                 if is_idle:
+                    # Fetch instance details to get name and machine type
+                    instance_name = instance_id # Default fallback
+                    cost = 0.0
+                    
+                    try:
+                        # We need to find the instance name from the ID, or list all instances and match ID
+                        # Listing is safer as we don't have the name yet
+                        # Optimization: In a real production app, cache this list
+                        list_request = compute_v1.ListInstancesRequest(project=project_id, zone=zone)
+                        for inst in compute_client.list(request=list_request):
+                            if str(inst.id) == instance_id:
+                                instance_name = inst.name
+                                machine_type = inst.machine_type.split("/")[-1] # zones/us-central1-a/machineTypes/e2-medium
+                                cost = PRICING.get(machine_type, 20.0) # Default to $20 if unknown
+                                break
+                    except Exception as e:
+                        logger.warning(f"Could not fetch details for instance {instance_id}: {e}")
+
                     idle_resources.append(ZombieResource(
                         resource_id=instance_id,
                         resource_type="gce_instance",
-                        name=instance_id, # Might need Compute API to get friendly name
+                        name=instance_name,
                         project_id=project_id,
                         zone=zone,
-                        waste_reason="Idle VM (< 5% CPU)",
-                        estimated_monthly_waste=0.0 # Requires price lookup
+                        waste_reason=f"Idle VM (< 5% CPU)",
+                        estimated_monthly_waste=cost
                     ))
 
         except Exception as e:
